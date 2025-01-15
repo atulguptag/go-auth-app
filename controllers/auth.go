@@ -100,7 +100,7 @@ func Home(c *gin.Context) {
 	c.JSON(200, gin.H{"success": "home page", "role": claims.Role})
 }
 
-// AdminHome Function to display admin home page
+// Logout Function to logout a user
 func Logout(c *gin.Context) {
 	c.SetCookie("access_token", "", -1, "/", "localhost", false, true)
 	c.JSON(200, gin.H{"success": "Successfully logged out!"})
