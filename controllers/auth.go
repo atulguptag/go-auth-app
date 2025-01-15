@@ -51,7 +51,7 @@ func Login(c *gin.Context) {
 	}
 
 	c.SetCookie("access_token", tokenString, int(expirationTime.Unix()), "/", "localhost", false, true)
-	c.JSON(200, gin.H{"message": "Successfully logged in"})
+	c.JSON(200, gin.H{"success": "Successfully logged in"})
 }
 
 // SignUp Function to create a new user
