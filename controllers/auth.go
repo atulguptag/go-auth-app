@@ -12,13 +12,16 @@ import (
 var jwtKey = []byte("my_secret_key")
 
 // Login Function to authenticate a user
+// c *gin.Context is a type that is used to get information about the incoming HTTP request and generate the HTTP response.
 func Login(c *gin.Context) {
 	var user models.User
+	// ShouldBindJSON function binding the incoming JSON request body to a User struct. If this fails, it returns a 400 error.
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
 
+	// It queries the database for a user with the provided email. If no user found, it returns a 401 error.
 	var existingUser models.User
 	models.DB.Where("email = ?", user.Email).First(&existingUser)
 	if existingUser.ID == 0 {
@@ -32,7 +35,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	expirationTime := time.Now().Add(5 * time.Minute)
+	expirationTime := time.Now().Add(time.Hour * 24) // Sets the expiration time of the token to 24 hours.
 
 	claims := &models.Claims{
 		Role: existingUser.Role,
@@ -50,6 +53,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// SetCookie function sets a cookie in the response header. It takes the name, value, expiration time, path, domain, secure, and httponly as arguments.
 	c.SetCookie("access_token", tokenString, int(expirationTime.Unix()), "/", "localhost", false, true)
 	c.JSON(200, gin.H{"success": "Successfully logged in"})
 }
@@ -82,7 +86,7 @@ func Signup(c *gin.Context) {
 
 // Home Function to display home page
 func Home(c *gin.Context) {
-	cookie, err := c.Cookie("access_token")
+	cookie, err := c.Cookie("access_token") //c.Cookie means it will get/read the cookie from the request.
 	if err != nil {
 		c.JSON(401, gin.H{"error": "Unauthorized"})
 		return
