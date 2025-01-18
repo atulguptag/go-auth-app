@@ -46,7 +46,8 @@ func Login(c *gin.Context) {
 	expirationTime := time.Now().Add(time.Hour * 24)
 
 	claims := &models.Claims{
-		Email: existingUser.Email,
+		Email:  existingUser.Email,
+		UserID: existingUser.ID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -93,7 +94,8 @@ func Signup(c *gin.Context) {
 	// Generate Verification Token
 	expirationTime := time.Now().Add(time.Hour * 24)
 	claims := &models.Claims{
-		Email: user.Email,
+		Email:  user.Email,
+		UserID: user.ID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -147,9 +149,19 @@ func VerifyEmail(c *gin.Context) {
 
 // Home Function to display home page
 func Home(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"success": "Welcome to JokeMaster!",
-	})
+	//c.Cookie means it will get/read the cookie from the request.
+	cookie, err := c.Cookie("access_token")
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+	claims, err := utils.ParseToken(cookie)
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": "Welcome to JokeMaster!", "email": claims.Email})
 }
 
 // Logout Function to logout a user
