@@ -112,8 +112,8 @@ func Signup(c *gin.Context) {
 	data := map[string]string{
 		"VerificationLink": verificationLink,
 	}
-
-	go utils.SendEmail(user.Email, "Please Verify Your Email", "templates/email_verification_template.html", data)
+	templatePath := "templates/email_verification_template.html"
+	go utils.SendEmail(user.Email, "Please Verify Your Email", templatePath, data)
 	c.JSON(http.StatusOK, gin.H{"success": "User created successfully! Please check your email to verify your account."})
 }
 
@@ -144,7 +144,7 @@ func VerifyEmail(c *gin.Context) {
 	user.IsVerified = true
 	user.UpdatedAt = time.Now()
 	models.DB.Save(&user)
-	c.JSON(200, gin.H{"success": "Email Verification Successful!"})
+	c.JSON(200, gin.H{"success": "Email Verification Successful! You can now login to your account."})
 }
 
 // Home Function to display home page

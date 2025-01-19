@@ -7,6 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var DB *gorm.DB
+
 type Config struct {
 	Host     string
 	Port     string
@@ -15,8 +17,6 @@ type Config struct {
 	DBName   string
 	SSLMode  string
 }
-
-var DB *gorm.DB
 
 func InitDB(cfg Config) {
 
@@ -34,4 +34,8 @@ func InitDB(cfg Config) {
 	fmt.Println("Migrated database")
 
 	DB = db
+}
+
+func GetDB() *gorm.DB {
+	return DB
 }

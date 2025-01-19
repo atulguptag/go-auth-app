@@ -55,14 +55,21 @@ func GenerateJokes(c *gin.Context) {
 		return
 	}
 
+	db, exists := c.Get("db")
+	if !exists || db == nil {
+		c.JSON(500, gin.H{"error": "Database not available"})
+		return
+	}
+
+	dbConn := db.(*gorm.DB)
+
 	// Save the prompt to the database
-	db := c.MustGet("db").(*gorm.DB)
 	prompt := models.Prompt{
 		UserID: userID.(uint),
 		Text:   request.Prompt,
 	}
 
-	if err := db.Create(&prompt).Error; err != nil {
+	if err := dbConn.Create(&prompt).Error; err != nil {
 		c.JSON(500, gin.H{"error": "Failed to save the prompt"})
 		return
 	}

@@ -81,6 +81,7 @@ To configure the project, update the database and JWT settings in the `config` d
 | `GET`       | `/logout`         | Log out of the current session |
 | `GET`       | `/home`           | Access the home page           |
 | `POST`      | `/reset-password` | Reset your password            |
+| `POST`      | `/generate-jokes` | Generate AI-Powered Jokes      |
 
 ---
 
