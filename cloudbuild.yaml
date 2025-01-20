@@ -5,14 +5,14 @@ steps:
       - "-c"
       - |
         go mod tidy
-        go build -o app main .
+        go build -o main .
 
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: "bash"
     args:
       [
         "-c",
-        "gcloud config set app/cloud_build_timeout 1600 && gcloud app deploy --quite",
+        "gcloud config set app/cloud_build_timeout 1600 && gcloud app deploy --quiet",
       ]
 
 options:
