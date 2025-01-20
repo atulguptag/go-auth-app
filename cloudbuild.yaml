@@ -1,0 +1,17 @@
+steps:
+  - name: "golang:1.23"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        go mod tidy
+        go build -o app .
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud app deploy --quiet
+
+timeout: "1200s"
