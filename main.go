@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"go-auth-app/models"
 	"go-auth-app/routes"
-	"log"
 	"os"
 
 	"github.com/gin-contrib/cors"
@@ -16,7 +16,7 @@ func main() {
 	err := godotenv.Load()
 
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		fmt.Println("Error loading .env file")
 	}
 
 	config := models.Config{
