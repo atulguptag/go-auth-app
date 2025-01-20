@@ -5,7 +5,7 @@ steps:
       - "-c"
       - |
         go mod tidy
-        go build -o app .
+        go build -o app main .
 
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: "bash"
