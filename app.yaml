@@ -2,8 +2,19 @@ runtime: go123
 instance_class: F1
 entrypoint: ./main
 
-includes:
-  - .env.yaml
+env_variables:
+  GIN_MODE: ${sm://projects/706489728076/secrets/GIN_MODE}
+  DB_HOST: ${sm://projects/706489728076/secrets/DB_HOST}
+  DB_USER: ${sm://projects/706489728076/secrets/DB_USER}
+  DB_NAME: ${sm://projects/706489728076/secrets/DB_NAME}
+  DB_PASSWORD: ${sm://projects/706489728076/secrets/DB_PASSWORD}
+  DB_PORT: ${sm://projects/706489728076/secrets/DB_PORT}
+  DB_SSL: ${sm://projects/706489728076/secrets/DB_SSL}
+  EMAIL_ADDRESS: ${sm://projects/706489728076/secrets/EMAIL_ADDRESS}
+  EMAIL_PASSWORD: ${sm://projects/706489728076/secrets/EMAIL_PASSWORD}
+  SMTP_HOST: ${sm://projects/706489728076/secrets/SMTP_HOST}
+  SMTP_PORT: ${sm://projects/706489728076/secrets/SMTP_PORT}
+  OPENAI_API_KEY: ${sm://projects/706489728076/secrets/OPENAI_API_KEY}
 
 automatic_scaling:
   target_cpu_utilization: 0.65
