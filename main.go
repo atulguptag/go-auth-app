@@ -13,6 +13,8 @@ import (
 
 func main() {
 	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+
 	err := godotenv.Load()
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -24,12 +26,17 @@ func main() {
 	}
 
 	config := models.Config{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		User:     os.Getenv("DB_USER"),
+		Host:     getEnvOrDefault("DB_HOST", "localhost"),
+		Port:     getEnvOrDefault("DB_PORT", "5432"),
+		User:     getEnvOrDefault("DB_USER", "postgres"),
 		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   os.Getenv("DB_NAME"),
-		SSLMode:  os.Getenv("DB_SSLMODE"),
+		DBName:   getEnvOrDefault("DB_NAME", "postgres"),
+		SSLMode:  getEnvOrDefault("DB_SSLMODE", "disable"),
+	}
+
+	if config.Password == "" {
+		fmt.Println("Missing DB_PASSWORD environment variable")
+		return
 	}
 
 	models.InitDB(config)
@@ -49,4 +56,12 @@ func main() {
 
 	routes.AuthRoutes(r)
 	r.Run(":" + port)
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }
