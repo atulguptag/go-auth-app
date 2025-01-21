@@ -1,17 +1,58 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"go-auth-app/models"
 	"go-auth-app/routes"
 	"os"
 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
+func accessSecretVersion(secretName string) string {
+	ctx := context.Background()
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		fmt.Printf("Failed to create secret manager client: %v\n", err)
+		return ""
+	}
+	defer client.Close()
+
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: secretName,
+	}
+
+	result, err := client.AccessSecretVersion(ctx, req)
+	if err != nil {
+		fmt.Printf("Failed to access secret: %v\n", err)
+		return ""
+	}
+
+	return string(result.Payload.Data)
+}
+
+func loadSecrets() {
+	os.Setenv("DB_HOST", accessSecretVersion("projects/706489728076/secrets/DB_HOST/versions/latest"))
+	os.Setenv("DB_USER", accessSecretVersion("projects/706489728076/secrets/DB_USER/versions/latest"))
+	os.Setenv("DB_NAME", accessSecretVersion("projects/706489728076/secrets/DB_NAME/versions/latest"))
+	os.Setenv("DB_PASSWORD", accessSecretVersion("projects/706489728076/secrets/DB_PASSWORD/versions/latest"))
+	os.Setenv("DB_PORT", accessSecretVersion("projects/706489728076/secrets/DB_PORT/versions/latest"))
+	os.Setenv("DB_SSL", accessSecretVersion("projects/706489728076/secrets/DB_SSL/versions/latest"))
+	os.Setenv("EMAIL_ADDRESS", accessSecretVersion("projects/706489728076/secrets/EMAIL_ADDRESS/versions/latest"))
+	os.Setenv("EMAIL_PASSWORD", accessSecretVersion("projects/706489728076/secrets/EMAIL_PASSWORD/versions/latest"))
+	os.Setenv("SMTP_HOST", accessSecretVersion("projects/706489728076/secrets/SMTP_HOST/versions/latest"))
+	os.Setenv("SMTP_PORT", accessSecretVersion("projects/706489728076/secrets/SMTP_PORT/versions/latest"))
+	os.Setenv("OPENAI_API_KEY", accessSecretVersion("projects/706489728076/secrets/OPENAI_API_KEY/versions/latest"))
+}
+
 func main() {
+	loadSecrets()
+
 	r := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
 
