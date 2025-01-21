@@ -1,6 +1,9 @@
-runtime: go123
+runtime: go119
 instance_class: F1
-entrypoint: sh -c "export GIN_MODE=$(gcloud secrets versions access latest --secret=GIN_MODE) && ./main"
+entrypoint: ./main
+
+env_variables:
+  GIN_MODE: "release"
 
 automatic_scaling:
   target_cpu_utilization: 0.65

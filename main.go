@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+
 	"go-auth-app/models"
 	"go-auth-app/routes"
-	"os"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -14,14 +16,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func accessSecretVersion(secretName string) string {
+func accessSecretVersion(client *secretmanager.Client, secretName string) (string, error) {
 	ctx := context.Background()
-	client, err := secretmanager.NewClient(ctx)
-	if err != nil {
-		fmt.Printf("Failed to create secret manager client: %v\n", err)
-		return ""
-	}
-	defer client.Close()
 
 	req := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: secretName,
@@ -29,41 +25,68 @@ func accessSecretVersion(secretName string) string {
 
 	result, err := client.AccessSecretVersion(ctx, req)
 	if err != nil {
-		fmt.Printf("Failed to access secret: %v\n", err)
-		return ""
+		return "", fmt.Errorf("failed to access secret %s: %v", secretName, err)
 	}
 
-	return string(result.Payload.Data)
+	return string(result.Payload.Data), nil
 }
 
-func loadSecrets() {
-	os.Setenv("DB_HOST", accessSecretVersion("projects/706489728076/secrets/DB_HOST/versions/latest"))
-	os.Setenv("DB_USER", accessSecretVersion("projects/706489728076/secrets/DB_USER/versions/latest"))
-	os.Setenv("DB_NAME", accessSecretVersion("projects/706489728076/secrets/DB_NAME/versions/latest"))
-	os.Setenv("DB_PASSWORD", accessSecretVersion("projects/706489728076/secrets/DB_PASSWORD/versions/latest"))
-	os.Setenv("DB_PORT", accessSecretVersion("projects/706489728076/secrets/DB_PORT/versions/latest"))
-	os.Setenv("DB_SSL", accessSecretVersion("projects/706489728076/secrets/DB_SSL/versions/latest"))
-	os.Setenv("EMAIL_ADDRESS", accessSecretVersion("projects/706489728076/secrets/EMAIL_ADDRESS/versions/latest"))
-	os.Setenv("EMAIL_PASSWORD", accessSecretVersion("projects/706489728076/secrets/EMAIL_PASSWORD/versions/latest"))
-	os.Setenv("SMTP_HOST", accessSecretVersion("projects/706489728076/secrets/SMTP_HOST/versions/latest"))
-	os.Setenv("SMTP_PORT", accessSecretVersion("projects/706489728076/secrets/SMTP_PORT/versions/latest"))
-	os.Setenv("OPENAI_API_KEY", accessSecretVersion("projects/706489728076/secrets/OPENAI_API_KEY/versions/latest"))
+func loadSecrets(client *secretmanager.Client) error {
+	secrets := []struct {
+		envName    string
+		secretName string
+	}{
+		{"DB_HOST", "projects/706489728076/secrets/DB_HOST/versions/latest"},
+		{"DB_USER", "projects/706489728076/secrets/DB_USER/versions/latest"},
+		{"DB_NAME", "projects/706489728076/secrets/DB_NAME/versions/latest"},
+		{"DB_PASSWORD", "projects/706489728076/secrets/DB_PASSWORD/versions/latest"},
+		{"DB_PORT", "projects/706489728076/secrets/DB_PORT/versions/latest"},
+		{"DB_SSL", "projects/706489728076/secrets/DB_SSL/versions/latest"},
+		{"EMAIL_ADDRESS", "projects/706489728076/secrets/EMAIL_ADDRESS/versions/latest"},
+		{"EMAIL_PASSWORD", "projects/706489728076/secrets/EMAIL_PASSWORD/versions/latest"},
+		{"SMTP_HOST", "projects/706489728076/secrets/SMTP_HOST/versions/latest"},
+		{"SMTP_PORT", "projects/706489728076/secrets/SMTP_PORT/versions/latest"},
+		{"OPENAI_API_KEY", "projects/706489728076/secrets/OPENAI_API_KEY/versions/latest"},
+	}
+
+	for _, secret := range secrets {
+		value, err := accessSecretVersion(client, secret.secretName)
+		if err != nil {
+			return err
+		}
+		os.Setenv(secret.envName, value)
+	}
+
+	return nil
 }
 
 func main() {
-	loadSecrets()
+	isProduction := os.Getenv("GAE_ENV") == "standard"
+
+	if isProduction {
+		ctx := context.Background()
+		client, err := secretmanager.NewClient(ctx)
+		if err != nil {
+			log.Fatalf("Failed to create Secret Manager client: %v", err)
+		}
+		defer client.Close()
+
+		if err := loadSecrets(client); err != nil {
+			log.Fatalf("Error loading secrets: %v", err)
+		}
+	} else {
+		if err := godotenv.Load(); err != nil {
+			log.Println("No .env file found, proceeding without it")
+		} else {
+			log.Println(".env file loaded successfully")
+		}
+	}
 
 	r := gin.Default()
-	gin.SetMode(gin.ReleaseMode)
 
-	err := godotenv.Load()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-	}
-
-	if err != nil {
-		fmt.Println("Error loading .env file")
 	}
 
 	config := models.Config{
@@ -72,12 +95,11 @@ func main() {
 		User:     getEnvOrDefault("DB_USER", "postgres"),
 		Password: os.Getenv("DB_PASSWORD"),
 		DBName:   getEnvOrDefault("DB_NAME", "postgres"),
-		SSLMode:  getEnvOrDefault("DB_SSLMODE", "disable"),
+		SSLMode:  getEnvOrDefault("DB_SSL", "disable"),
 	}
 
 	if config.Password == "" {
-		fmt.Println("Missing DB_PASSWORD environment variable")
-		return
+		log.Fatal("Missing DB_PASSWORD environment variable")
 	}
 
 	models.InitDB(config)
@@ -96,7 +118,10 @@ func main() {
 	})
 
 	routes.AuthRoutes(r)
-	r.Run(":" + port)
+
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("Failed to run server: %v", err)
+	}
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
