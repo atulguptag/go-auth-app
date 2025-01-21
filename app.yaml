@@ -1,9 +1,8 @@
 runtime: go123
 instance_class: F1
-entrypoint: ./main
+entrypoint: sh -c "export GIN_MODE=$(gcloud secrets versions access latest --secret=GIN_MODE) && ./main"
 
 env_variables:
-  GIN_MODE: ${sm://projects/706489728076/secrets/GIN_MODE}
   DB_HOST: ${sm://projects/706489728076/secrets/DB_HOST}
   DB_USER: ${sm://projects/706489728076/secrets/DB_USER}
   DB_NAME: ${sm://projects/706489728076/secrets/DB_NAME}
