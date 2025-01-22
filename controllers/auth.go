@@ -5,6 +5,7 @@ import (
 	"go-auth-app/models"
 	"go-auth-app/utils"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -62,7 +63,13 @@ func Login(c *gin.Context) {
 	}
 
 	// SetCookie function sets a cookie in the response header.
-	c.SetCookie("access_token", tokenString, int(expirationTime.Unix()), "/", "localhost", false, true)
+	domain := os.Getenv("COOKIE_DOMAIN")
+	if domain == "" {
+		domain = "localhost"
+	}
+	secure := os.Getenv("COOKIE_SECURE") == "false"
+	httpOnly := os.Getenv("COOKIE_HTTPONLY") == "true"
+	c.SetCookie("access_token", tokenString, int(expirationTime.Unix()), "/", domain, secure, httpOnly)
 	c.JSON(200, gin.H{"success": "Successfully logged in"})
 }
 
@@ -166,7 +173,13 @@ func Home(c *gin.Context) {
 
 // Logout Function to logout a user
 func Logout(c *gin.Context) {
-	c.SetCookie("access_token", "", -1, "/", "localhost", false, true)
+	domain := os.Getenv("COOKIE_DOMAIN")
+	if domain == "" {
+		domain = "localhost"
+	}
+	secure := os.Getenv("COOKIE_SECURE") == "false"
+	httpOnly := os.Getenv("COOKIE_HTTPONLY") == "true"
+	c.SetCookie("access_token", "", -1, "/", domain, secure, httpOnly)
 	c.JSON(200, gin.H{"success": "Successfully logged out!"})
 }
 

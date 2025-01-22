@@ -48,6 +48,9 @@ func loadSecrets(client *secretmanager.Client) error {
 		{"SMTP_HOST", "projects/706489728076/secrets/SMTP_HOST/versions/latest"},
 		{"SMTP_PORT", "projects/706489728076/secrets/SMTP_PORT/versions/latest"},
 		{"OPENAI_API_KEY", "projects/706489728076/secrets/OPENAI_API_KEY/versions/latest"},
+		{"COOKIE_DOMAIN", "projects/706489728076/secrets/COOKIE_DOMAIN/versions/latest"},
+		{"COOKIE_SECURE", "projects/706489728076/secrets/COOKIE_SECURE/versions/latest"},
+		{"COOKIE_HTTPONLY", "projects/706489728076/secrets/COOKIE_HTTPONLY/versions/latest"},
 	}
 
 	for _, secret := range secrets {
