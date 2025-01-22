@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"go-auth-app/models"
 	"go-auth-app/routes"
@@ -54,7 +55,7 @@ func loadSecrets(client *secretmanager.Client) error {
 		if err != nil {
 			return err
 		}
-		os.Setenv(secret.envName, value)
+		os.Setenv(secret.envName, strings.TrimSpace(value))
 	}
 
 	return nil
