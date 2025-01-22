@@ -3,12 +3,4 @@ instance_class: F1
 entrypoint: ./main
 
 env_variables:
-  GIN_MODE: "release"
-
-automatic_scaling:
-  target_cpu_utilization: 0.65
-  target_throughput_utilization: 0.75
-  max_instances: 10
-
-inbound_services:
-  - warmup
+  INSTANCE_UNIX_SOCKET: /cloudsql/golang-deploy-448219:us-central1:go-auth-app

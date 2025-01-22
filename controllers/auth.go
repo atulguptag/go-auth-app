@@ -107,7 +107,7 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	verificationLink := fmt.Sprintf("http://localhost:3000/verify?token=%s", tokenString)
+	verificationLink := fmt.Sprintf("https://jokemaster-go.netlify.app/verify?token=%s", tokenString)
 
 	data := map[string]string{
 		"VerificationLink": verificationLink,
