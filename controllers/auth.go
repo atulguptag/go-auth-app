@@ -67,9 +67,37 @@ func Login(c *gin.Context) {
 	if domain == "" {
 		domain = "localhost"
 	}
-	secure := os.Getenv("COOKIE_SECURE") == "false"
-	httpOnly := os.Getenv("COOKIE_HTTPONLY") == "true"
+
+	secure := true
+	if secureStr := os.Getenv("COOKIE_SECURE"); secureStr != "" {
+		secure = secureStr == "true"
+	}
+
+	httpOnly := true
+	if httpOnlyStr := os.Getenv("COOKIE_HTTPONLY"); httpOnlyStr != "" {
+		httpOnly = httpOnlyStr == "true"
+	}
+
+	sameSite := os.Getenv("COOKIE_SAMESITE")
+	if sameSite == "" {
+		sameSite = "Lax"
+	}
 	c.SetCookie("access_token", tokenString, int(expirationTime.Unix()), "/", domain, secure, httpOnly)
+
+	var cookieHeader string
+	switch sameSite {
+	case "None":
+		cookieHeader = fmt.Sprintf("access_token=%s; Path=/; Domain=%s; SameSite=None; Secure",
+			tokenString, domain)
+	case "Strict":
+		cookieHeader = fmt.Sprintf("access_token=%s; Path=/; Domain=%s; SameSite=Strict",
+			tokenString, domain)
+	default:
+		cookieHeader = fmt.Sprintf("access_token=%s; Path=/; Domain=%s; SameSite=Lax",
+			tokenString, domain)
+	}
+
+	c.Header("Set-Cookie", cookieHeader)
 	c.JSON(200, gin.H{"success": "Successfully logged in"})
 }
 
