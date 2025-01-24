@@ -1,21 +1,29 @@
 package utils
 
 import (
+	"errors"
 	"go-auth-app/models"
 
 	"github.com/dgrijalva/jwt-go"
 )
 
-func ParseToken(tokenString string) (claims *models.Claims, err error) {
-	access_token, err := jwt.ParseWithClaims(tokenString, &models.Claims{}, func(access_token *jwt.Token) (interface{}, error) {
-		return []byte("my_secret_key"), nil
+var jwtKey = []byte("my_secret_key")
+
+func ParseToken(tokenString string) (*models.Claims, error) {
+	if tokenString == "" {
+		return nil, errors.New("empty token")
+	}
+	claims := &models.Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	claims, ok := access_token.Claims.(*models.Claims)
+	claims, ok := token.Claims.(*models.Claims)
 
 	if !ok {
 		return nil, err
