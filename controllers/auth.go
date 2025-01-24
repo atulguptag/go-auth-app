@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go-auth-app/models"
 	"go-auth-app/utils"
-	"net/http"
 	"strings"
 	"time"
 
@@ -112,14 +111,14 @@ func Signup(c *gin.Context) {
 	}
 	templatePath := "templates/email_verification_template.html"
 	go utils.SendEmail(user.Email, "Please Verify Your Email", templatePath, data)
-	c.JSON(http.StatusOK, gin.H{"success": "User created successfully! Please check your email to verify your account."})
+	c.JSON(200, gin.H{"success": "User created successfully! Please check your email to verify your account."})
 }
 
 // Verify email function to verify an email address
 func VerifyEmail(c *gin.Context) {
 	tokenString := c.Query("token")
 	if tokenString == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Token is required"})
+		c.JSON(400, gin.H{"error": "Token is required"})
 		return
 	}
 
@@ -128,7 +127,7 @@ func VerifyEmail(c *gin.Context) {
 		return jwtKey, nil
 	})
 	if err != nil || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		c.JSON(401, gin.H{"error": "Invalid or expired token"})
 		return
 	}
 
@@ -175,7 +174,7 @@ func Home(c *gin.Context) {
 // Logout Function to logout a user
 func Logout(c *gin.Context) {
 	c.JSON(200, gin.H{
-		"success": "Successfully logged out! Please clear the access token from localStorage.",
+		"success": "Successfully logged out!",
 	})
 }
 
@@ -204,4 +203,22 @@ func ResetPassword(c *gin.Context) {
 
 	models.DB.Model(&existingUser).Update("password", user.Password)
 	c.JSON(200, gin.H{"success": "Password reset successfully"})
+}
+
+func Profile(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var prompts []models.Prompt
+	result := models.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&prompts)
+
+	if result.Error != nil {
+		c.JSON(500, gin.H{"error": "Failed to retrieve prompts"})
+		return
+	}
+
+	c.JSON(200, prompts)
 }
