@@ -7,17 +7,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func IsAuthorized() gin.HandlerFunc {
+func IsAuthorized(allowAnonymous bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
 		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")
+
 		if authHeader == "" {
+			if allowAnonymous {
+				c.Next()
+				return
+			}
 			c.JSON(401, gin.H{"error": "Authorization header missing"})
 			c.Abort()
 			return
 		}
 
 		if !strings.HasPrefix(authHeader, "Bearer ") {
+			if allowAnonymous {
+				c.Next()
+				return
+			}
+
 			c.JSON(401, gin.H{"error": "Invalid authorization format"})
 			c.Abort()
 			return
@@ -25,6 +36,16 @@ func IsAuthorized() gin.HandlerFunc {
 
 		// Extract the token
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		if tokenString == "" || tokenString == "null" || tokenString == "undefined" {
+			if allowAnonymous {
+				c.Next()
+				return
+			}
+			c.JSON(401, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
 
 		// Parse the token
 		claims, err := utils.ParseToken(tokenString)
