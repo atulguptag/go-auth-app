@@ -5,7 +5,7 @@ import (
 	"go-auth-app/models"
 	"go-auth-app/utils"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -15,7 +15,6 @@ import (
 var jwtKey = []byte("my_secret_key")
 
 // Login Function to authenticate a user
-// c *gin.Context is a type that is used to get information about the incoming HTTP request and generate the HTTP response.
 func Login(c *gin.Context) {
 	var user models.User
 	// ShouldBindJSON function binding the incoming JSON request body to a User struct.
@@ -62,43 +61,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// SetCookie function sets a cookie in the response header.
-	domain := os.Getenv("COOKIE_DOMAIN")
-	if domain == "" {
-		domain = "localhost"
-	}
-
-	secure := true
-	if secureStr := os.Getenv("COOKIE_SECURE"); secureStr != "" {
-		secure = secureStr == "true"
-	}
-
-	httpOnly := true
-	if httpOnlyStr := os.Getenv("COOKIE_HTTPONLY"); httpOnlyStr != "" {
-		httpOnly = httpOnlyStr == "true"
-	}
-
-	sameSite := os.Getenv("COOKIE_SAMESITE")
-	if sameSite == "" {
-		sameSite = "Lax"
-	}
-	c.SetCookie("access_token", tokenString, int(expirationTime.Unix()), "/", domain, secure, httpOnly)
-
-	var cookieHeader string
-	switch sameSite {
-	case "None":
-		cookieHeader = fmt.Sprintf("access_token=%s; Path=/; Domain=%s; SameSite=None; Secure",
-			tokenString, domain)
-	case "Strict":
-		cookieHeader = fmt.Sprintf("access_token=%s; Path=/; Domain=%s; SameSite=Strict",
-			tokenString, domain)
-	default:
-		cookieHeader = fmt.Sprintf("access_token=%s; Path=/; Domain=%s; SameSite=Lax",
-			tokenString, domain)
-	}
-
-	c.Header("Set-Cookie", cookieHeader)
-	c.JSON(200, gin.H{"success": "Successfully logged in"})
+	c.JSON(200, gin.H{"success": "Successfully logged in", "access_token": tokenString})
 }
 
 // SignUp Function to create a new user
@@ -184,13 +147,23 @@ func VerifyEmail(c *gin.Context) {
 
 // Home Function to display home page
 func Home(c *gin.Context) {
-	//c.Cookie means it will get/read the cookie from the request.
-	cookie, err := c.Cookie("access_token")
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+	// Read the token from the Authorization header
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(401, gin.H{"error": "Authorization header missing"})
 		return
 	}
-	claims, err := utils.ParseToken(cookie)
+
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		c.JSON(401, gin.H{"error": "Invalid authorization format"})
+		return
+	}
+
+	// Extract the token
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	// Parse the token
+	claims, err := utils.ParseToken(tokenString)
 	if err != nil {
 		c.JSON(401, gin.H{"error": "Unauthorized"})
 		return
@@ -201,14 +174,9 @@ func Home(c *gin.Context) {
 
 // Logout Function to logout a user
 func Logout(c *gin.Context) {
-	domain := os.Getenv("COOKIE_DOMAIN")
-	if domain == "" {
-		domain = "localhost"
-	}
-	secure := os.Getenv("COOKIE_SECURE") == "false"
-	httpOnly := os.Getenv("COOKIE_HTTPONLY") == "true"
-	c.SetCookie("access_token", "", -1, "/", domain, secure, httpOnly)
-	c.JSON(200, gin.H{"success": "Successfully logged out!"})
+	c.JSON(200, gin.H{
+		"success": "Successfully logged out! Please clear the access token from localStorage.",
+	})
 }
 
 // ResetPassword Function to reset user password
