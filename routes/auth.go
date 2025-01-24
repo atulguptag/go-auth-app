@@ -14,5 +14,5 @@ func AuthRoutes(r *gin.Engine) {
 	r.GET("/logout", controllers.Logout)
 	r.GET("/verify", controllers.VerifyEmail)
 	r.POST("/reset-password", controllers.ResetPassword)
-	r.POST("/generate-jokes", middlewares.IsAuthorized(), controllers.GenerateJokes)
+	r.POST("/generate-jokes", middlewares.IsAuthorized(true), controllers.GenerateJokes)
 }
