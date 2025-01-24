@@ -7,8 +7,11 @@ import (
 )
 
 type AnonymousGeneration struct {
-	gorm.Model
-	IPAddress          string `gorm:"index"`
-	GenerationCount    int    `gorm:"default:0"`
-	LastGenerationTime time.Time
+	ID                 uint `gorm:"primaryKey"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          gorm.DeletedAt `gorm:"index"`
+	AnonymousID        string         `gorm:"unique;column:anonymous_id"`
+	GenerationCount    int            `gorm:"column:generation_count"`
+	LastGenerationTime time.Time      `gorm:"column:last_generation_time"`
 }

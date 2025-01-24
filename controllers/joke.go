@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-auth-app/models"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -70,19 +69,20 @@ func GenerateJokes(c *gin.Context) {
 }
 
 func handleAnonymousJokeGeneration(c *gin.Context, request JokeRequest, db *gorm.DB) {
-	ip, _, err := net.SplitHostPort(c.Request.RemoteAddr)
-	if err != nil {
-		ip = c.ClientIP()
+	anonymousID := c.GetHeader("X-Anonymous-Id")
+
+	if anonymousID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing anonymous ID"})
+		return
 	}
 
-	// Check and update anonymous generation
 	var anonymousGen models.AnonymousGeneration
-	result := db.Where("ip_address = ?", ip).First(&anonymousGen)
+	result := db.Where("anonymous_id = ?", anonymousID).First(&anonymousGen)
 
 	// If no record exists or it's been more than 24 hours since last generation
 	if result.Error == gorm.ErrRecordNotFound || time.Since(anonymousGen.LastGenerationTime) > 24*time.Hour {
 		anonymousGen = models.AnonymousGeneration{
-			IPAddress:          ip,
+			AnonymousID:        anonymousID,
 			GenerationCount:    1,
 			LastGenerationTime: time.Now(),
 		}
