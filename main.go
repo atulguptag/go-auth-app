@@ -48,6 +48,10 @@ func loadSecrets(client *secretmanager.Client) error {
 		{"SMTP_HOST", "projects/706489728076/secrets/SMTP_HOST/versions/latest"},
 		{"SMTP_PORT", "projects/706489728076/secrets/SMTP_PORT/versions/latest"},
 		{"OPENAI_API_KEY", "projects/706489728076/secrets/OPENAI_API_KEY/versions/latest"},
+		{"GOOGLE_OAUTH_REDIRECT_URL", "projects/706489728076/secrets/GOOGLE_OAUTH_REDIRECT_URL/versions/latest"},
+		{"GOOGLE_CLIENT_ID", "projects/706489728076/secrets/GOOGLE_CLIENT_ID/versions/latest"},
+		{"GOOGLE_CLIENT_SECRET", "projects/706489728076/secrets/GOOGLE_CLIENT_SECRET/versions/latest"},
+		{"REACT_FRONTEND_URL", "projects/706489728076/secrets/REACT_FRONTEND_URL/versions/latest"},
 	}
 
 	for _, secret := range secrets {
