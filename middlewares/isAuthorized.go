@@ -9,8 +9,6 @@ import (
 
 func IsAuthorized(allowAnonymous bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
@@ -48,7 +46,7 @@ func IsAuthorized(allowAnonymous bool) gin.HandlerFunc {
 		}
 
 		// Parse the token
-		claims, err := utils.ParseToken(tokenString)
+		claims, err := utils.ParseJWT(tokenString)
 		if err != nil {
 			c.JSON(401, gin.H{"error": "Unauthorized"})
 			c.Abort()

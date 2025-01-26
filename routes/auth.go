@@ -12,8 +12,13 @@ func AuthRoutes(r *gin.Engine) {
 	r.POST("/login", controllers.Login)
 	r.POST("/signup", controllers.Signup)
 	r.GET("/logout", controllers.Logout)
-	r.GET("/profile", middlewares.IsAuthorized(false), controllers.Profile)
 	r.GET("/verify", controllers.VerifyEmail)
+
+	// Google OAuth Routes
+	r.GET("/auth/google", controllers.GoogleLogin)
+	r.GET("/auth/google/callback", controllers.GoogleAuthCallback)
+
+	r.GET("/profile", middlewares.IsAuthorized(false), controllers.Profile)
 	r.POST("/reset-password", controllers.ResetPassword)
 	r.POST("/generate-jokes", middlewares.IsAuthorized(true), controllers.GenerateJokes)
 }

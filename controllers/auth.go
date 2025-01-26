@@ -1,28 +1,29 @@
 package controllers
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"go-auth-app/models"
 	"go-auth-app/utils"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
-
-var jwtKey = []byte("my_secret_key")
 
 // Login Function to authenticate a user
 func Login(c *gin.Context) {
 	var user models.User
-	// ShouldBindJSON function binding the incoming JSON request body to a User struct.
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// It queries the database for a user with the provided email.
 	var existingUser models.User
 	models.DB.Where("email = ?", user.Email).First(&existingUser)
 	if existingUser.ID == 0 {
@@ -41,20 +42,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Sets the expiration time of the token to 24 hours.
-	expirationTime := time.Now().Add(time.Hour * 24)
-
-	claims := &models.Claims{
-		Email:  existingUser.Email,
-		UserID: existingUser.ID,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
-
-	access_token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := access_token.SignedString(jwtKey)
-
+	tokenString, err := utils.GenerateJWT(user.ID, user.Email)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Error generating token"})
 		return
@@ -88,19 +76,10 @@ func Signup(c *gin.Context) {
 	user.IsVerified = false
 	models.DB.Create(&user)
 
-	// Generate Verification Token
-	expirationTime := time.Now().Add(time.Hour * 24)
-	claims := &models.Claims{
-		Email:  user.Email,
-		UserID: user.ID,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	// Generate JWT Token
+	tokenString, err := utils.GenerateJWT(user.ID, user.Email)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Error generating verification token"})
+		c.JSON(500, gin.H{"error": "Failed to generate JWT"})
 		return
 	}
 
@@ -122,12 +101,9 @@ func VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	claims := &models.Claims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if err != nil || !token.Valid {
-		c.JSON(401, gin.H{"error": "Invalid or expired token"})
+	claims, err := utils.ParseJWT(tokenString)
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
 		return
 	}
 
@@ -162,7 +138,7 @@ func Home(c *gin.Context) {
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
 	// Parse the token
-	claims, err := utils.ParseToken(tokenString)
+	claims, err := utils.ParseJWT(tokenString)
 	if err != nil {
 		c.JSON(401, gin.H{"error": "Unauthorized"})
 		return
@@ -221,4 +197,112 @@ func Profile(c *gin.Context) {
 	}
 
 	c.JSON(200, prompts)
+}
+
+// GenerateState generates a random state string
+func generateState() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// GoogleLogin initiates the Google OAuth2 flow
+func GoogleLogin(c *gin.Context) {
+	state, err := generateState()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to generate state"})
+		return
+	}
+
+	url := utils.GetGoogleOAuthURL(state)
+	c.Redirect(302, url)
+}
+
+// GoogleAuthCallback handles the callback from Google OAuth2
+func GoogleAuthCallback(c *gin.Context) {
+	stateFromQuery := c.Query("state")
+	if stateFromQuery == "" {
+		c.JSON(400, gin.H{"error": "State parameter missing"})
+		return
+	}
+
+	code := c.Query("code")
+	if code == "" {
+		c.JSON(400, gin.H{"error": "Code not found"})
+		return
+	}
+
+	token, err := utils.ExchangeCode(code)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to exchange code for token"})
+		return
+	}
+
+	client := utils.GoogleOauthConfig.Client(context.Background(), token)
+	userInfoResp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to get user info"})
+		return
+	}
+	defer userInfoResp.Body.Close()
+
+	var userInfo struct {
+		ID            string `json:"id"`
+		Email         string `json:"email"`
+		VerifiedEmail bool   `json:"verified_email"`
+		Name          string `json:"name"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
+		Picture       string `json:"picture"`
+		Locale        string `json:"locale"`
+	}
+
+	if err := json.NewDecoder(userInfoResp.Body).Decode(&userInfo); err != nil {
+		c.JSON(500, gin.H{"error": "Failed to decode user info"})
+		return
+	}
+
+	var user models.User
+	if err := models.DB.Where("email = ?", userInfo.Email).First(&user).Error; err != nil {
+		user = models.User{
+			Name:              userInfo.Name,
+			Email:             userInfo.Email,
+			IsVerified:        userInfo.VerifiedEmail,
+			ImageURL:          userInfo.Picture,
+			GoogleID:          userInfo.ID,
+			Provider:          "google",
+			VerificationToken: "",
+			Prompts:           []models.Prompt{},
+		}
+		if err := models.DB.Create(&user).Error; err != nil {
+			c.JSON(500, gin.H{"error": "Failed to create user"})
+			return
+		}
+	}
+
+	// Generate JWT Token
+	jwtToken, err := utils.GenerateJWT(user.ID, user.Email)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to generate JWT"})
+		return
+	}
+
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("No .env file found, proceeding without it")
+	} else {
+		fmt.Println(".env file loaded successfully")
+	}
+
+	// Redirect to frontend with token
+	frontendURL := os.Getenv("REACT_FRONTEND_URL")
+	if frontendURL == "" {
+		fmt.Println("REACT_FRONTEND_URL is not set in environment variables")
+		c.JSON(500, gin.H{"error": "Configuration error"})
+		return
+	}
+
+	redirectURL := fmt.Sprintf("%s/auth/google/callback?token=%s", frontendURL, jwtToken)
+	c.Redirect(302, redirectURL)
 }

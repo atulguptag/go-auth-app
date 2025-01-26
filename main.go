@@ -110,6 +110,7 @@ func main() {
 		AllowOrigins:     []string{"http://localhost:3000", "https://jokemaster-go.netlify.app", "https://golang-deploy-448219.uc.r.appspot.com"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Anonymous-Id"},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
 
