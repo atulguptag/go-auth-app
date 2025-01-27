@@ -3,6 +3,12 @@ instance_class: F1
 entrypoint: ./main
 
 handlers:
+  - url: /auth/google
+    script: auto
+
+  - url: /auth/google/callback
+    script: auto
+
   - url: /.*
     secure: always
     script: auto
