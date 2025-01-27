@@ -2,5 +2,11 @@ runtime: go123
 instance_class: F1
 entrypoint: ./main
 
+handlers:
+  - url: /.*
+    secure: always
+    script: auto
+    redirect_http_response_code: 301
+
 env_variables:
   INSTANCE_UNIX_SOCKET: /cloudsql/golang-deploy-448219:us-central1:go-auth-app
